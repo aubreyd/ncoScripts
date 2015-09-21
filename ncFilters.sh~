@@ -25,7 +25,7 @@ function ncVarList { ncks -m ${1} | grep -E ': type' | cut -f 1 -d ' ' | sed 's/
 # if varname is specified, then print for only that variable
 function ncVarMax { 
     functionId funcId
-    local dumFile=/tmp/cdDum${USER}${funcId}.nc
+    local dumFile=/tmp/ncDum${USER}${funcId}.nc
     if [ -z "$2" ] ## only one arg in
     then
 	for var in `ncVarList ${1}`
@@ -44,7 +44,7 @@ function ncmdn { ncap2 -O -C -v -s "foo=gsl_stats_median_from_sorted_data(${1}.s
 # ncrng $var_nm $fl_nm : What is range of variable?
 function ncVarRng { 
     functionId funcId
-    local dumFile=/tmp/cdDum${USER}${funcId}.nc
+    local dumFile=/tmp/ncDum${USER}${funcId}.nc
     if [ -z "$2" ] ## only one arg in
     then
 	for var in `ncVarList ${1}`
@@ -57,7 +57,10 @@ function ncVarRng {
 	if [ $zeroDiffs == 0 ] 
 	then 
 	    nonZeros=`echo $rng | sed 's/[^1-9]//g'`
-	    if [ -e $nonZeros ]; then return 0; fi
+	    if [ -e $nonZeros ]; then 
+		rm $dumFile
+		return 0
+	    fi
 	fi
 	
 	outputId='Range' ## basic identifier

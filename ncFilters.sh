@@ -20,6 +20,24 @@ function ncdmnsz { ncks -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d '
 # ncVarlist $fl_nm : What variables are in file?
 function ncVarList { ncks -m ${1} | grep -E ': type' | cut -f 1 -d ' ' | sed 's/://' | sort ; }
 
+# mvVarType
+function ncVarType { 
+    functionId funcId
+    if [ -z "$2" ] ## only one arg in
+    then
+	for var in `ncVarList ${1}`
+	do 
+	    ncVarType $var ${1}
+	done 
+    else
+	local dumFile=/tmp/ncDum${USER}${funcId}.nc
+	type=`ncap2 -O -C -v -s "foo=${1}.type();print(foo)" ${2} $dumFile | cut -f 3- -d ' '`
+	\rm -f $dumFile
+	echo ${1} : Type=$type
+    fi
+}
+
+
 # ncVarMax $var_nm $fl_nm : What is maximum of variable?
 # if only 1 variable (filename) then print the info for all variables in the file.
 # if varname is specified, then print for only that variable
@@ -34,6 +52,7 @@ function ncVarMax {
 	done 
     else
 	max=`ncap2 -O -C -v -s "foo=${1}.max();print(foo)" ${2} $dumFile | cut -f 3- -d ' '`
+	\rm -f $dumFile
 	echo ${1} : Max=$max
     fi
 }
@@ -52,22 +71,28 @@ function ncVarRng {
 	    ncVarRng $var ${1}
 	done 
     else
-	rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %f\");print(\" , \");print(foo_max,\"%f )\")" ${2} $dumFile`
 
-	if [ $zeroDiffs == 0 ] 
+	type=`ncVarType $1 $2 | cut -f 2- -d '='`
+	if [[ $type == 3 ]] 
+	then 
+	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %i\");print(\" , \");print(foo_max,\"%i )\")" ${2} $dumFile`
+	else 
+	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %f\");print(\" , \");print(foo_max,\"%f )\")" ${2} $dumFile`
+	fi 
+
+	if [[ $zeroDiffs == 0 ]]
 	then 
 	    nonZeros=`echo $rng | sed 's/[^1-9]//g'`
 	    if [ -e $nonZeros ]; then 
-		rm $dumFile
+		\rm -f $dumFile
 		return 0
 	    fi
 	fi
-	
 	outputId='Range' ## basic identifier
 	callFunc=${FUNCNAME[-1]}  ##modify the identitier based on calling routine name
 	if [[ $callFunc == 'ncVarDiff' ]]; then outputId=`echo DIFF $outputId`; fi 
 	echo ${1} : $outputId=$rng
-	rm $dumFile
+	\rm -f $dumFile
     fi
     return 0
 }
@@ -96,7 +121,6 @@ function ncVarDiff {
 
     functionId funcId
     local dumFile=/tmp/ncDum${USER}${funcId}.nc
-    #echo $dumFile
     if [ -z "$3" ] ## only two args in
     then
 	if ! checkFiles $1 $2; then return 1; fi
@@ -106,7 +130,7 @@ function ncVarDiff {
 	ncdiff -v ${1} ${2} ${3} $dumFile
     fi 
     ncVarRng $dumFile
-    rm $dumFile
+    \rm -f $dumFile
     return 0
 }
 
