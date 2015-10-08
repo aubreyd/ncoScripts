@@ -73,19 +73,28 @@ function ncVarRng {
     else
 
 	type=`ncVarType $1 $2 | cut -f 2- -d '='`
-	if [[ $type == 3 ]] 
+	if [[ $type -eq 4 ]]  ## integer
 	then 
 	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %i\");print(\" , \");print(foo_max,\"%i )\")" ${2} $dumFile`
-	else 
+        fi
+
+	if [[ $type -eq 5 ]]  ## real
+        then
 	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %f\");print(\" , \");print(foo_max,\"%f )\")" ${2} $dumFile`
 	fi 
 
-	if [[ $zeroDiffs == 0 ]]
+	if [[ $type -eq 2 ]]  ## character
+        then
+            echo -e "\e[31m$1: not currently providing ranges for character type\e[0m"
+	    #rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %s\");print(\" , \");print(foo_max,\"%s )\")" ${2} $dumFile`
+	fi 
+
+	if [[ $zeroDiffs -eq 0 ]]
 	then 
 	    nonZeros=`echo $rng | sed 's/[^1-9]//g'`
 	    if [ -e $nonZeros ]; then 
 		\rm -f $dumFile
-		return 0
+                return 0
 	    fi
 	fi
 	outputId='Range' ## basic identifier
@@ -93,8 +102,9 @@ function ncVarRng {
 	if [[ $callFunc == 'ncVarDiff' ]]; then outputId=`echo DIFF $outputId`; fi 
 	echo ${1} : $outputId=$rng
 	\rm -f $dumFile
+        retVal=1
     fi
-    return 0
+    return $retVal
 }
 
 ## var or no var specified. 
@@ -130,8 +140,9 @@ function ncVarDiff {
 	ncdiff -v ${1} ${2} ${3} $dumFile
     fi 
     ncVarRng $dumFile
+    retNcVarRng=$?
     \rm -f $dumFile
-    return 0
+    return $retNcVarRng
 }
 
 
