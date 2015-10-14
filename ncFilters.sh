@@ -77,7 +77,7 @@ function ncVarNa {
         return $retVal
     else
         ## as noted, this seems to work regardless of _FillValue=NaN
-        sum=`ncap2 -O -C -v -s "sum=(${1}*0.0+1.0).total();print(sum)" ${2} dum.nc | cut -f 2 -d '=' | tr -d ' ' | grep -i 'nan'`
+        sum=`ncap2 -O -C -v -s "sum=(${1}*0.0+1.0).total();print(sum)" ${2} $dumFile | cut -f 2 -d '=' | tr -d ' ' | grep -i 'nan'`
         if [ ! -z $sum ]
         then
 	    echo -e "$1 : \e[31mNaNs present\e[0m"   
@@ -144,7 +144,6 @@ function ncVarRng {
 ## e.g.
 ##jamesmcc@hydro-c1:~/DART/lanai/models/wrfHydro/work> ncVarDiff LAI,WT,WOOD RESTART.2013091200_DOMAIN3.orig restart.nc 
 function ncVarDiff {
-
     OPTIND=1
     local zeroDiffs=0
     while getopts ":z" opt; do
@@ -155,8 +154,7 @@ function ncVarDiff {
 		echo "Invalid option: -$OPTARG" >&2
 		;;
 	esac
-    done
-    
+    done   
     shift $((OPTIND-1))
     [ "$1" = "--" ] && shift
 
@@ -164,10 +162,10 @@ function ncVarDiff {
     local dumFile=/tmp/ncDum${USER}${funcId}.nc
     if [ -z "$3" ] ## only two args in
     then
-	if ! checkFiles $1 $2; then return 1; fi
-	ncdiff ${1} ${2} ${dumFile}
+	if ! ncCheckExist $1 $2; then return 1; fi
+	ncdiff ${1} ${2} $dumFile
     else 
-	if ! checkFiles $2 $3; then return 1; fi
+	if ! ncCheckExist $2 $3; then return 1; fi
 	ncdiff -v ${1} ${2} ${3} $dumFile
     fi 
     ncVarRng $dumFile
@@ -189,7 +187,7 @@ function functionId {
 }
     
 ## check file eixistence b/c resulting error messages can be extremely confusing.
-function checkFiles {
+function ncCheckExist {
     for file in "$@"
     do
 	if [ ! -e $file ]
