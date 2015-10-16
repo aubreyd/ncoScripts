@@ -77,8 +77,8 @@ function ncVarNa {
         return $retVal
     else
         ## as noted, this seems to work regardless of _FillValue=NaN
-        sum=`ncap2 -O -C -v -s "sum=(${1}*0.0+1.0).total();print(sum)" ${2} $dumFile | cut -f 2 -d '=' | tr -d ' ' | grep -i 'nan'`
-        if [ ! -z $sum ]
+        sum=`ncap2 -O -C -v -s "sum=(${1}*0.0).total();print(sum)" ${2} $dumFile | cut -f 2 -d '=' | tr -d ' ' | grep -i '0'`
+        if [ -z $sum ]
         then
 	    echo -e "$1 : \e[31mNaNs present\e[0m"   
             return 1
