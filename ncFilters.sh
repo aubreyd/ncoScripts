@@ -129,8 +129,14 @@ function ncVarRng {
 	    fi
 	fi
 	outputId='Range' ## basic identifier
-	callFunc=${FUNCNAME[-1]}  ##modify the identitier based on calling routine name
-	if [[ $callFunc == 'ncVarDiff' ]]; then outputId=`echo DIFF $outputId`; fi 
+
+        ## want to identify what ultimately called ncVarRng, if not itself
+        myFuncName=`echo ${FUNCNAME[*]}`
+        thisFunc=`echo $funcId | cut -d'.' -f2`
+        matchLine=`echo "$myFuncName" | tr ' ' '\n' | grep -n $thisFunc | cut -d':' -f1 | tail -1`
+        ## this already adds 1 because array is zero indexed
+        callFunc=${FUNCNAME[$matchLine]}  ##modify the identitier based on calling routine name
+        if [[ $callFunc == 'ncVarDiff' ]]; then outputId="DIFF $outputId"; fi 
 	echo ${1} : $outputId=$rng
 	\rm -f $dumFile
         retVal=1
@@ -183,7 +189,7 @@ function ncrecsz { ncks -M ${1} | grep -E -i "^Record dimension:" | cut -f 8- -d
 
 ## get a function id for managin file creation/removal
 function functionId {
-    eval "$1=${BASHPID}${FUNCNAME[1]}"
+    eval "$1=${BASHPID}.${FUNCNAME[1]}"
 }
     
 ## check file eixistence b/c resulting error messages can be extremely confusing.
@@ -198,3 +204,44 @@ function ncCheckExist {
     done
     return 0
 }
+
+
+# Check if a value exists in an array
+# @param $1 element
+# @param $2 array
+# @return  Success (0) if value exists, Failure (1) otherwise
+# Usage: in_array "$needle" "${haystack[@]}"
+# See: http://fvue.nl/wiki/Bash:_Check_if_array_element_exists
+#function whichArr {
+#    value="$1"
+#    array="$2"
+#    local i=1;
+#    for member in "${array[@]}"; do
+#        echo "member: $member"
+#        if [[ "$member" == "$value" ]]; then
+#            echo $i
+#        fi
+#        ((i++))
+#    done
+#    return 0
+#}
+
+#function whichArr {
+#    local  value="$1"
+#    array=("${2}")
+#echo "fooo: $value"
+#echo "bar: ${array[@]}"
+#    for (( i=0;i < ${#array[@]}; i++)); do
+#        x="${array[$i]}"
+#        [ "$value" == "$x" ] && echo $i
+#    done
+#    return 1
+#}
+
+#function whichArrLast {
+#    element=$1
+#    array=$2
+#    wh=`whichArr "$element" "$member"`
+#    echo `echo $wh | tr ' ' '\n' | tail -1`
+#    return 0
+#}
