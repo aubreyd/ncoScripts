@@ -120,7 +120,13 @@ function ncVarRng {
 	    #rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %s\");print(\" , \");print(foo_max,\"%s )\")" ${2} $dumFile`
 	fi 
 
-	if [[ $zeroDiffs -eq 0 ]]
+        ## want to identify if ncVarDiff called ncVarRng
+        myFuncName=`echo ${FUNCNAME[*]}`
+        thisFunc=`echo $funcId | cut -d'.' -f2`
+        matchLine=`echo "$myFuncName" | tr ' ' '\n' | grep -n $thisFunc | cut -d':' -f1 | tail -1`
+        ## this already adds 1 because array is zero indexed
+        callFunc=${FUNCNAME[$matchLine]}  ##modify the identitier based on calling routine name
+	if [[ $zeroDiffs -eq 0 ]] && [[ $callFunc == 'ncVarDiff' ]]
 	then 
 	    nonZeros=`echo $rng | sed 's/[^1-9]//g'`
 	    if [ -e $nonZeros ]; then 
@@ -128,14 +134,8 @@ function ncVarRng {
                 return 0
 	    fi
 	fi
-	outputId='Range' ## basic identifier
 
-        ## want to identify what ultimately called ncVarRng, if not itself
-        myFuncName=`echo ${FUNCNAME[*]}`
-        thisFunc=`echo $funcId | cut -d'.' -f2`
-        matchLine=`echo "$myFuncName" | tr ' ' '\n' | grep -n $thisFunc | cut -d':' -f1 | tail -1`
-        ## this already adds 1 because array is zero indexed
-        callFunc=${FUNCNAME[$matchLine]}  ##modify the identitier based on calling routine name
+	outputId='Range' ## basic identifier
         if [[ $callFunc == 'ncVarDiff' ]]; then outputId="DIFF $outputId"; fi 
 	echo ${1} : $outputId=$rng
 	\rm -f $dumFile
