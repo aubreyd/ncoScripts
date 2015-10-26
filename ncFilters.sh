@@ -87,6 +87,39 @@ function ncVarNa {
     fi
 }
 
+
+
+
+function ncVarFill {
+    functionId funcId
+    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+## notes from ncVarNa
+    ## It appears that if there are nans, having _FillValue set to NaN does
+    ## NOT mask them from the ncap sum I'm using to test. So can skip applying
+    ## the next two lines in anyway.
+    #ncatted -a _FillValue,,o,f,NaN $dumFile
+    #ncatted -a _FillValue,,m,f,1.0e36 $dumFile
+    if [ -z "$2" ] ## only one arg in
+    then
+        retVal=0
+	for var in `ncVarList ${1}`
+	do 
+	    ncVarFill $var ${1}
+            retVal=$(($retVal + $?))
+	done 
+        return $retVal
+    else
+        nMiss=`ncap2 -O -C -v -s "nMiss=${1}.number_miss();print(nMiss)" ${2} $dumFile | cut -f 2 -d '=' | tr -d ' '`
+        if [ $nMiss -ne 0 ]
+        then
+            fillVal=`ncap2 -O -C -v -s "fillVal=${1}.get_miss();print(fillVal)" ${2} $dumFile`  
+	    echo -e "$1 : \e[31m$nMiss fill values present ( $fillVal )\e[0m"   
+            return 1
+        fi 
+        return 0
+    fi
+}
+
 # ncmdn $var_nm $fl_nm : What is median of variable?
 function ncmdn { ncap2 -O -C -v -s "foo=gsl_stats_median_from_sorted_data(${1}.sort());print(foo)" ${2} ~/foo.nc | cut -f 3- -d ' ' ; }
 
