@@ -1,6 +1,8 @@
+#!/bin/bash
+
+tmpPath=`grep "tmpPath" ~/.ncoScripts | cut -d '=' -f2 | tr -d ' '` 
+
 # These derived from examples found here: http://nco.sourceforge.net/nco.html#filters
-# NB: Untested on Csh, Ksh, Sh, Zsh! Send us feedback!
-# Bash shell (/bin/bash) users place these in .bashrc
 
 # ncattget $att_nm $var_nm $fl_nm : What attributes does variable have?
 function ncattget { ncks -M -m ${3} | grep -E -i "^${2} attribute [0-9]+: ${1}" | cut -f 11- -d ' ' | sort ; }
@@ -30,7 +32,7 @@ function ncVarType {
 	    ncVarType $var ${1}
 	done 
     else
-	local dumFile=/tmp/ncDum${USER}${funcId}.nc
+	local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
 	type=`ncap2 -O -C -v -s "foo=${1}.type();print(foo)" ${2} $dumFile | cut -f 3- -d ' '`
 	\rm -f $dumFile
 	echo ${1} : Type=$type
@@ -43,7 +45,7 @@ function ncVarType {
 # if varname is specified, then print for only that variable
 function ncVarMax { 
     functionId funcId
-    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+    local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
     if [ -z "$2" ] ## only one arg in
     then
 	for var in `ncVarList ${1}`
@@ -60,7 +62,7 @@ function ncVarMax {
 
 function ncVarNa {
     functionId funcId
-    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+    local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
     ## It appears that if there are nans, having _FillValue set to NaN does
     ## NOT mask them from the ncap sum I'm using to test. So can skip applying
     ## the next two lines in anyway.
@@ -88,11 +90,9 @@ function ncVarNa {
 }
 
 
-
-
 function ncVarFill {
     functionId funcId
-    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+    local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
 ## notes from ncVarNa
     ## It appears that if there are nans, having _FillValue set to NaN does
     ## NOT mask them from the ncap sum I'm using to test. So can skip applying
@@ -127,7 +127,7 @@ function ncmdn { ncap2 -O -C -v -s "foo=gsl_stats_median_from_sorted_data(${1}.s
 # ncrng $var_nm $fl_nm : What is range of variable?
 function ncVarRng { 
     functionId funcId
-    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+    local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
     if [ -z "$2" ] ## only one arg in
     then
 	for var in `ncVarList ${1}`
@@ -136,13 +136,22 @@ function ncVarRng {
 	done 
     else
 
+
 	type=`ncVarType $1 $2 | cut -f 2- -d '='`
+        ##echo $type
+        #echo $dumFile
+
+        if [[ ! $type -eq 2 && ! $type -eq 4 && ! $type -eq 5 && ! $type -eq 6 ]]; then
+            echo "Variable type not yet covered: " $1
+            return 1
+        fi
+
 	if [[ $type -eq 4 ]]  ## integer
 	then 
 	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %i\");print(\" , \");print(foo_max,\"%i )\")" ${2} $dumFile`
         fi
 
-	if [[ $type -eq 5 ]]  ## real
+	if [[ $type -eq 5 || $type -eq 6 ]]  ## real
         then
 	    rng=`ncap2 -O -C -v -s "foo_min=${1}.min();foo_max=${1}.max();print(foo_min,\"( %f\");print(\" , \");print(foo_max,\"%f )\")" ${2} $dumFile`
 	fi 
@@ -198,7 +207,7 @@ function ncVarDiff {
     [ "$1" = "--" ] && shift
 
     functionId funcId
-    local dumFile=/tmp/ncDum${USER}${funcId}.nc
+    local dumFile=/${tmpPath}/ncDum${USER}${funcId}.nc
     if [ -z "$3" ] ## only two args in
     then
 	if ! ncCheckExist $1 $2; then return 1; fi
